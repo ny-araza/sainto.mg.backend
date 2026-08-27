@@ -1,6 +1,8 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    AssistantChatView,
     ClientViewSet,
     ProduitLikeViewSet,
     ProduitMadoViewSet,
@@ -16,4 +18,8 @@ router.register(r"clients", ClientViewSet, basename="clients")
 router.register(r"likes", ProduitLikeViewSet, basename="likes")
 
 router.register("pubs", PubViewSet, basename="pub")
-urlpatterns = router.urls
+
+
+urlpatterns = [
+    path("assistant/", AssistantChatView.as_view(), name="assistant-chat"),
+] + router.urls

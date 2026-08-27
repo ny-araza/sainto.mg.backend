@@ -1,7 +1,10 @@
+import requests
+from django.core.cache import cache
 from django.db.models import Avg
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Client, ProduitLike, ProduitMado, Pub
 from .serializers import (
@@ -15,6 +18,8 @@ from .serializers import (
 # =========================================================
 # PRODUITS
 # =========================================================
+CACHE_KEY_PRODUITS = "assistant_produits_text"
+CACHE_TIMEOUT = 60 * 15  # 15 minutes
 
 
 class ProduitMadoViewSet(viewsets.ReadOnlyModelViewSet):
@@ -30,6 +35,71 @@ class ProduitMadoViewSet(viewsets.ReadOnlyModelViewSet):
 # =========================================================
 # CLIENT
 # =========================================================
+
+
+def build_produits_text():
+    """Construit le texte des produits à insérer dans le prompt."""
+    produits_qs = (
+        ProduitMado.objects.only("name", "price", "nb_unite_in_pack", "poid").order_by(
+            "name"
+        )[:100]  # limite pour ne pas exploser le prompt
+    )
+
+    if not produits_qs.exists():
+        return "Aucun produit disponible actuellement."
+
+    lignes = []
+    for p in produits_qs:
+        prix = f"{p.price:,.0f}".replace(",", " ")
+        ligne = f"- {p.name} : {prix} Ar"
+        if p.nb_unite_in_pack:
+            ligne += f" (pack de {p.nb_unite_in_pack} unités)"
+        if p.poid:
+            ligne += f" - poids : {p.poid}"
+        lignes.append(ligne)
+
+    return "Produits disponibles :\n" + "\n".join(lignes)
+
+
+def get_produits_text():
+    """Récupère le texte des produits depuis le cache, ou le reconstruit."""
+    produits_text = cache.get(CACHE_KEY_PRODUITS)
+    if produits_text is None:
+        produits_text = build_produits_text()
+        cache.set(CACHE_KEY_PRODUITS, produits_text, CACHE_TIMEOUT)
+    return produits_text
+
+
+class AssistantChatView(APIView):
+    def post(self, request):
+        message = request.data.get("message")
+        if not message:
+            return Response({"error": "Le message est obligatoire"}, status=400)
+
+        produits_text = get_produits_text()
+
+        prompt = f"""
+        Voici les informations actuelles de l'entreprise :
+        {produits_text}
+
+        Question du client : {message}
+
+        Réponds uniquement en utilisant les informations disponibles.
+        Si une information manque, ne l'invente pas.
+        """
+
+        response = requests.post(
+            "http://localhost:11434/api/chat",
+            json={
+                "model": "assistant-vente",
+                "stream": False,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+        )
+
+        data = response.json()
+
+        return Response({"message": data["message"]["content"]})
 
 
 class ClientViewSet(viewsets.ModelViewSet):
