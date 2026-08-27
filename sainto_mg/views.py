@@ -70,35 +70,43 @@ def get_produits_text():
     return produits_text
 
 
+ROLES_AUTORISES = {"user", "assistant"}
+MAX_HISTORIQUE = 20  # limite le nombre de messages envoyés au modèle
+
+
 class AssistantChatView(APIView):
     def post(self, request):
         message = request.data.get("message")
         if not message:
             return Response({"error": "Le message est obligatoire"}, status=400)
 
-        produits_text = get_produits_text()
+        historique_brut = request.data.get("historique", [])
+        if not isinstance(historique_brut, list):
+            return Response(
+                {"error": "Le format de l'historique est invalide"}, status=400
+            )
 
-        prompt = f"""
-        Voici les informations actuelles de l'entreprise :
-        {produits_text}
+        # Validation et nettoyage de l'historique reçu du frontend
+        historique_valide = []
+        for item in historique_brut[-MAX_HISTORIQUE:]:
+            role = item.get("role")
+            content = item.get("content")
+            if role in ROLES_AUTORISES and isinstance(content, str) and content.strip():
+                historique_valide.append({"role": role, "content": content})
 
-        Question du client : {message}
-
-        Réponds uniquement en utilisant les informations disponibles.
-        Si une information manque, ne l'invente pas.
-        """
+        # Pas de message "system" ici : Ollama applique automatiquement
+        # celui défini dans le Modelfile du modèle "assistant-vente"
+        messages_ollama = historique_valide + [{"role": "user", "content": message}]
 
         response = requests.post(
             "http://localhost:11434/api/chat",
             json={
                 "model": "assistant-vente",
                 "stream": False,
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": messages_ollama,
             },
         )
-
         data = response.json()
-
         return Response({"message": data["message"]["content"]})
 
 
