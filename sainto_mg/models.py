@@ -25,7 +25,7 @@ class ProduitMado(models.Model):
 
 
 class Client(models.Model):
-    email = models.EmailField(null=True, blank=True)
+    email = models.TextField(null=True, blank=True)
 
     date = models.DateTimeField(auto_now_add=True)
 
