@@ -4,8 +4,11 @@ from .models import Client, ProduitLike, ProduitMado
 
 
 class ProduitMadoSerializer(serializers.ModelSerializer):
+    path = serializers.SerializerMethodField()
+
     class Meta:
         model = ProduitMado
+
         fields = [
             "id",
             "name",
@@ -16,6 +19,17 @@ class ProduitMadoSerializer(serializers.ModelSerializer):
             "is_unite",
             "poid",
         ]
+
+    def get_path(self, obj):
+        request = self.context.get("request")
+
+        if not obj.path:
+            return None
+
+        if request:
+            return request.build_absolute_uri(obj.path.url)
+
+        return obj.path.url
 
 
 class ClientSerializer(serializers.ModelSerializer):

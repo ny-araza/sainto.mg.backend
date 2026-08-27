@@ -1,5 +1,5 @@
-from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 
 class ProduitMado(models.Model):
@@ -7,7 +7,7 @@ class ProduitMado(models.Model):
 
     price = models.DecimalField(max_digits=12, decimal_places=2)
 
-    path = models.CharField(max_length=500, default="#")
+    path = models.ImageField(upload_to="produits/", null=True, blank=True)
 
     rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
@@ -22,8 +22,6 @@ class ProduitMado(models.Model):
 
     class Meta:
         db_table = "produit_mado"
-
-
 
 
 class Client(models.Model):
