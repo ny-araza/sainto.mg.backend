@@ -1,3 +1,4 @@
+from django.db.models import Avg
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -31,34 +32,50 @@ class ProduitMadoViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ClientViewSet(viewsets.ModelViewSet):
-    """
-    POST /api/clients/
-    GET /api/clients/
-    GET /api/clients/{id}/
-    """
-
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
 
-    @action(detail=True, methods=["get"], url_path="likes")
-    def likes(self, request, pk=None):
-        """
-        GET /api/clients/{id}/likes/
-        """
+    def create(self, request, *args, **kwargs):
 
-        client = self.get_object()
+        email = request.data.get("email")
 
-        likes = client.likes.select_related("produit").all()
+        if not email:
+            return Response(
+                {"status": False, "message": "L'email est obligatoire"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        serializer = ProduitLikeDetailSerializer(likes, many=True)
+        client, created = Client.objects.get_or_create(
+            email=email,
+            defaults={
+                "message": request.data.get("message"),
+                "rating": request.data.get("rating"),
+            },
+        )
+
+        # Si le client existe déjà et qu'un feedback
+        # est envoyé, on peut mettre à jour son feedback.
+        if not created:
+            message = request.data.get("message")
+            rating = request.data.get("rating")
+
+            if message is not None:
+                client.message = message
+
+            if rating is not None:
+                client.rating = rating
+
+            client.save()
+
+        serializer = self.get_serializer(client)
 
         return Response(
             {
                 "status": True,
-                "client": client.id,
-                "total_likes": likes.count(),
+                "created": created,
                 "data": serializer.data,
-            }
+            },
+            status=status.HTTP_200_OK,
         )
 
 
@@ -122,4 +139,29 @@ class ProduitLikeViewSet(viewsets.ModelViewSet):
                 "data": serializer.data,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class ProduitMadoViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ProduitMado.objects.all()
+    serializer_class = ProduitMadoSerializer
+
+    @action(detail=True, methods=["get"], url_path="ratings")
+    def ratings(self, request, pk=None):
+
+        produit = self.get_object()
+
+        clients = Client.objects.filter(likes__produit=produit, rating__isnull=False)
+
+        moyenne = clients.aggregate(moyenne=Avg("rating"))["moyenne"]
+
+        total = clients.count()
+
+        return Response(
+            {
+                "status": True,
+                "product": produit.id,
+                "total": total,
+                "average": round(float(moyenne), 2) if moyenne else 0,
+            }
         )
