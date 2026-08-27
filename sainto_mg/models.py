@@ -25,18 +25,11 @@ class ProduitMado(models.Model):
 
 
 class Client(models.Model):
-    email = models.EmailField()
+    email = models.EmailField(null=True, blank=True)
 
     date = models.DateTimeField(auto_now_add=True)
 
-    message = models.TextField(blank=True, null=True)
-
-    rating = models.PositiveSmallIntegerField(
-        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(5)]
-    )
-
-    def __str__(self):
-        return self.email
+    message = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = "client"
@@ -53,17 +46,6 @@ class ProduitLike(models.Model):
 
     class Meta:
         db_table = "produit_like"
-
-        # Empêche un client de liker deux fois
-        # le même produit
-        constraints = [
-            models.UniqueConstraint(
-                fields=["client", "produit"], name="unique_client_produit_like"
-            )
-        ]
-
-    def __str__(self):
-        return f"{self.client.email} aime {self.produit.name}"
 
 
 class Pub(models.Model):

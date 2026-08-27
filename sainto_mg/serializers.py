@@ -5,6 +5,8 @@ from .models import Client, ProduitLike, ProduitMado, Pub
 
 class ProduitMadoSerializer(serializers.ModelSerializer):
     path = serializers.SerializerMethodField()
+    rate = serializers.SerializerMethodField()
+    total_likes = serializers.SerializerMethodField()
 
     class Meta:
         model = ProduitMado
@@ -15,6 +17,7 @@ class ProduitMadoSerializer(serializers.ModelSerializer):
             "price",
             "path",
             "rate",
+            "total_likes",
             "nb_unite_in_pack",
             "is_unite",
             "poid",
@@ -30,6 +33,27 @@ class ProduitMadoSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.path.url)
 
         return obj.path.url
+
+    def get_total_likes(self, obj):
+        return obj.likes.count()
+
+    def get_rate(self, obj):
+        # Nombre de likes du produit actuel
+        likes_produit = obj.likes.count()
+
+        # Chercher le produit qui possède le plus de likes
+        produits = ProduitMado.objects.all()
+
+        max_likes = max([produit.likes.count() for produit in produits], default=0)
+
+        # Aucun like dans toute la base
+        if max_likes == 0:
+            return 1.0
+
+        # Conversion sur une échelle de 1 à 5
+        rate = 1 + (likes_produit / max_likes) * 4
+
+        return round(rate, 1)
 
 
 class ClientSerializer(serializers.ModelSerializer):

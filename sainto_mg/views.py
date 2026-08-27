@@ -50,7 +50,6 @@ class ClientViewSet(viewsets.ModelViewSet):
             email=email,
             defaults={
                 "message": request.data.get("message"),
-                "rating": request.data.get("rating"),
             },
         )
 
@@ -58,13 +57,9 @@ class ClientViewSet(viewsets.ModelViewSet):
         # est envoyé, on peut mettre à jour son feedback.
         if not created:
             message = request.data.get("message")
-            rating = request.data.get("rating")
 
             if message is not None:
                 client.message = message
-
-            if rating is not None:
-                client.rating = rating
 
             client.save()
 
@@ -115,15 +110,6 @@ class ProduitLikeViewSet(viewsets.ModelViewSet):
         if not client_id or not produit_id:
             return Response(
                 {"status": False, "message": "client et produit sont obligatoires"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Vérifie si le like existe déjà
-        if ProduitLike.objects.filter(
-            client_id=client_id, produit_id=produit_id
-        ).exists():
-            return Response(
-                {"status": False, "message": "Ce client a déjà liké ce produit"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
