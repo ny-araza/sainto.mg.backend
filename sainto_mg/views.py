@@ -3,12 +3,13 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Client, ProduitLike, ProduitMado
+from .models import Client, ProduitLike, ProduitMado, Pub
 from .serializers import (
     ClientSerializer,
     ProduitLikeDetailSerializer,
     ProduitLikeSerializer,
     ProduitMadoSerializer,
+    PubSerializer,
 )
 
 # =========================================================
@@ -165,3 +166,8 @@ class ProduitMadoViewSet(viewsets.ReadOnlyModelViewSet):
                 "average": round(float(moyenne), 2) if moyenne else 0,
             }
         )
+
+
+class PubViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Pub.objects.all().order_by("-id")
+    serializer_class = PubSerializer

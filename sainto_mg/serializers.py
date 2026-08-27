@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Client, ProduitLike, ProduitMado
+from .models import Client, ProduitLike, ProduitMado, Pub
 
 
 class ProduitMadoSerializer(serializers.ModelSerializer):
@@ -74,3 +74,26 @@ class ProduitLikeDetailSerializer(serializers.ModelSerializer):
             "produit",
             "date",
         ]
+
+
+class PubSerializer(serializers.ModelSerializer):
+    path = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Pub
+
+        fields = [
+            "id",
+            "path",
+        ]
+
+    def get_path(self, obj):
+        request = self.context.get("request")
+
+        if not obj.path:
+            return None
+
+        if request:
+            return request.build_absolute_uri(obj.path.url)
+
+        return obj.path.url

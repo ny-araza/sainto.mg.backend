@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Client, ProduitLike, ProduitMado
+from .models import Client, ProduitLike, ProduitMado, Pub
 
 
 @admin.register(ProduitMado)
@@ -30,4 +30,12 @@ class ProduitLikeAdmin(admin.ModelAdmin):
         "client",
         "produit",
         "date",
+    )
+
+
+@admin.register(Pub)
+class PubAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "path",
     )

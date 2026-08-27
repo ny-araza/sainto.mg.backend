@@ -64,3 +64,13 @@ class ProduitLike(models.Model):
 
     def __str__(self):
         return f"{self.client.email} aime {self.produit.name}"
+
+
+class Pub(models.Model):
+    path = models.ImageField(upload_to="pub/")
+
+    class Meta:
+        db_table = "pub"
+
+    def __str__(self):
+        return f"Publicité {self.id}"
