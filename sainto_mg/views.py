@@ -1,11 +1,18 @@
+import os
+
 import requests
+import resend
 from django.core.cache import cache
 from django.db.models import Avg
+from dotenv import load_dotenv
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+print(load_dotenv("./config/.env"))
+resend.api_key = os.getenv("RESEND_API_KEY")
+resend_sender = os.getenv("RESEND_EMAIL_SENDER")
 from .models import Client, ProduitLike, ProduitMado, Pub
 from .serializers import (
     ClientSerializer,
@@ -71,7 +78,7 @@ def get_produits_text():
 
 
 ROLES_AUTORISES = {"user", "assistant"}
-MAX_HISTORIQUE = 20  # limite le nombre de messages envoyés au modèle
+MAX_HISTORIQUE = 6  # limite le nombre de messages envoyés au modèle
 
 
 class AssistantChatView(APIView):
@@ -103,6 +110,13 @@ class AssistantChatView(APIView):
             json={
                 "model": "assistant-vente",
                 "stream": False,
+                "option": {
+                    "temperature": 0.1,
+                    "repeat_penalty": 1.2,
+                    "num_predict": 120,
+                    "keep_alive": "5m"
+                },
+                
                 "messages": messages_ollama,
             },
         )
@@ -235,3 +249,69 @@ class ProduitMadoViewSet(viewsets.ReadOnlyModelViewSet):
 class PubViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Pub.objects.all().order_by("-id")
     serializer_class = PubSerializer
+
+
+@api_view(["POST"])
+def send_devis_email(request):
+    nom = request.data.get("nom")
+    email = request.data.get("email")
+    telephone = request.data.get("telephone")
+    adresse = request.data.get("adresse")
+    panier = request.data.get("panier")
+    devis = request.data.get("devis")
+
+    produits_html = ""
+
+    for produit in panier:
+        produits_html += f"""
+            <tr>
+                <td>{produit.get("name")}</td>
+                <td>{produit.get("quantite")}</td>
+                <td>{produit.get("price")} Ar</td>
+            </tr>
+        """
+
+    resend.Emails.send(
+        {
+            "from": "Sainto Madagascar <onboarding@resend.dev>",
+            # Ici tu peux envoyer au client
+            "to": f"{resend_sender}",
+            "subject": f"Confirmation du commande de {email}",
+            "html": f"""
+
+            <h2>Informations du client</h2>
+
+            <p><strong>Nom :</strong> {nom}</p>
+            <p><strong>Email :</strong> {email}</p>
+            <p><strong>Téléphone :</strong> {telephone}</p>
+            <p><strong>Adresse :</strong> {adresse}</p>
+
+            <h2>Produits commandés</h2>
+
+            <table border="1" cellpadding="10">
+                <tr>
+                    <th>Produit</th>
+                    <th>Quantité</th>
+                    <th>Prix unitaire</th>
+                </tr>
+
+                {produits_html}
+            </table>
+
+            <h2>Résumé</h2>
+
+            <p><strong>Total HT :</strong> {devis.get("totalHT")} Ar</p>
+            <p><strong>TVA :</strong> {devis.get("totalTVA")} Ar</p>
+            <p><strong>Total TTC :</strong> {devis.get("totalTTC")} Ar</p>
+
+            <br>
+
+            <p>
+                Merci de votre confiance.<br>
+                <strong>Sainto Madagascar 💧</strong>
+            </p>
+        """,
+        }
+    )
+
+    return Response({"success": True, "message": "Email envoyé"})

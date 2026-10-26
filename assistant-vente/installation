@@ -1,0 +1,13 @@
+# Installer Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Télécharger le modèle léger
+ollama pull llama3.2:1b
+
+# Installer les dépendances Python
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+creation de l'assiatant 
+ollama create assistant-vente -f Modelfile
