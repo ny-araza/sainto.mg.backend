@@ -4,3 +4,4 @@ requests
 django-cors-headers
 pillow
 resend
+python-dotenv
