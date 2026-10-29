@@ -1,5 +1,13 @@
-from pathlib import Path
 import os
+import socket
+from pathlib import Path
+
+_orig_getaddrinfo = socket.getaddrinfo
+
+def _ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+    return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+socket.getaddrinfo = _ipv4_only
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,23 +29,23 @@ ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
         "DJANGO_ALLOWED_HOSTS",
-        "localhost,127.0.0.1,0.0.0.0,backend,stock-management",
+        "localhost,127.0.0.1,0.0.0.0,backend,stock-management,.trycloudflare.com",
     ).split(",")
     if host.strip()
 ]
 
 
-# Application definition
-
 CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173",
-    ).split(",")
-    if origin.strip()
+    # origin.strip()
+    # for origin in os.getenv(
+    #     "CORS_ALLOWED_ORIGINS",
+    #     "http://localhost:5173",
+    # ).split(",")
+    # if origin.strip()
+    "http://localhost:5173",
 ]
-
+CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.trycloudflare\.com$"]
+CSRF_TRUSTED_ORIGINS = ["https://*.trycloudflare.com"]
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -45,10 +53,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
     "corsheaders",
+    "rest_framework",
     "sainto_mg",
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -60,6 +69,13 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+}
 
 ROOT_URLCONF = "config.urls"
 

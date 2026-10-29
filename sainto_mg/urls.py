@@ -7,8 +7,9 @@ from .views import (
     ProduitLikeViewSet,
     ProduitMadoViewSet,
     PubViewSet,
-    send_devis_email
 )
+
+from .send_email import send_devis_email
 
 router = DefaultRouter()
 
